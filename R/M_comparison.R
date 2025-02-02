@@ -1,5 +1,5 @@
 # Estim multiple Ms
-
+library(tidyverse)
 dat <- readr::read_csv("./M_biopar.csv")
 
 Mdat <-
@@ -16,6 +16,7 @@ pivot_longer(-c(Species, Stock, M_method, Longevity, Mmax, Tmat, Wmat, Sex, Linf
   dplyr::mutate(Charnov = (L/Linf)^-1.5*K) %>%
   dplyr::mutate(Jensen = 1.753*K) %>%
   dplyr::mutate(Japan = Mmax) %>%
+  dplyr::mutate(Hewitt = 4.966/Longevity) %>%
   tidyr::pivot_longer(-c(Species, Stock, M_method, Longevity, Mmax, Tmat, Wmat, Sex, Linf, K, t0, Age, W, L),
 names_to = "Mtype", values_to = "M") %>%
   dplyr::mutate(Age = as.double(Age)) %>%
@@ -25,6 +26,30 @@ names_to = "Mtype", values_to = "M") %>%
 Mdat_annual <- Mdat%>%
   dplyr::filter(Mtype != "Charnov") %>%
   dplyr::filter(Mtype != "Lorenzen")
+
+Mdat_annual %>% dplyr::filter(Longevity == 10) %>% dplyr::select(SPSTSEX, Mmax, Mtype, M) %>% unique() %>% dplyr::mutate(diff = M-Mmax) %>% dplyr::arrange(diff) %>% print(n=30)
+
+Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>% dplyr::mutate(diff = M-Mmax) %>%
+  tidyr::drop_na(diff) %>%
+  dplyr::mutate(st_diff = diff/M) %>%
+  dplyr::filter(Mtype != "Japan") %>%
+  ggplot() +
+  geom_point(aes(Mmax,  st_diff, color = Species, group = Species, shape = Mtype)) +
+  facet_wrap(~Species, scales = "free_y") +
+  geom_hline(aes(yintercept = 0), color = "red4", linetype = "dashed") + theme_bw() +
+  labs(x = "Current M", y = "Scaled difference", title = "Scaled difference of current M and estimated M")
+
+ggsave("./figs/scaled_diff_M_species.png",width = 10, height = 7)
+
+Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>%
+  dplyr::filter(Mtype != "Japan") %>% #dplyr::filter(Mtype == "Jensen") %>% print(n=50)
+  ggplot() +
+  geom_point(aes(x = Mmax, y = M, shape = Mtype, color = Species, group = Species), size = 2)+
+  stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
+  theme_bw() +
+  labs(x = "Current M" ,y = "Estimated otehr M", title = "Current M vs M by other estimators")
+
+ggsave("./figs/MvsotehrM.png",width = 8, height = 5)
 
 ggplot()+
   geom_point(dat = Mdat_annual %>% dplyr::filter(Mtype != "Japan"), aes(Longevity, M, color = Species, shape = Mtype),size = 2) +
