@@ -27,7 +27,8 @@ Mdat_annual <- Mdat%>%
   dplyr::filter(Mtype != "Charnov") %>%
   dplyr::filter(Mtype != "Lorenzen")
 
-Mdat_annual %>% dplyr::filter(Longevity == 10) %>% dplyr::select(SPSTSEX, Mmax, Mtype, M) %>% unique() %>% dplyr::mutate(diff = M-Mmax) %>% dplyr::arrange(diff) %>% print(n=30)
+Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>% dplyr::mutate(diff = M-Mmax) %>%
+  tidyr::drop_na(diff) %>% dplyr::arrange(diff)
 
 Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>% dplyr::mutate(diff = M-Mmax) %>%
   tidyr::drop_na(diff) %>%
@@ -47,17 +48,53 @@ Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M
   geom_point(aes(x = Mmax, y = M, shape = Mtype, color = Species, group = Species), size = 2)+
   stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
   theme_bw() +
-  labs(x = "Current M" ,y = "Estimated otehr M", title = "Current M vs M by other estimators")
+  labs(x = "Current M" ,y = "Estimated other M", title = "Current M vs M by other estimators")
 
 ggsave("./figs/MvsotehrM.png",width = 8, height = 5)
 
-ggplot()+
-  geom_point(dat = Mdat_annual %>% dplyr::filter(Mtype != "Japan"), aes(Longevity, M, color = Species, shape = Mtype),size = 2) +
-  geom_point(dat= Mdat_annual %>% dplyr::filter(Mtype == "Japan"), aes(Longevity, M, color = Species),
-             size = 3, pch=21)+
-  # scale_x_log10() +
-  ylim(0, 6) +
-  theme_bw()
+Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>%
+  dplyr::filter(Mtype != "Japan") %>% #dplyr::filter(Mtype == "Jensen") %>% print(n=50)
+  ggplot() +
+  geom_point(aes(x = Mmax, y = M, shape = Mtype, color = Species, group = Species), size = 2)+
+  stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
+  theme_bw() +
+  labs(x = "Current M" ,y = "Estimated other M", title = "Current M vs M by other estimators") +scale_y_log10()
+
+ggsave("./figs/MvsotehrM_logy.png",width = 8, height = 5)
+
+Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>%
+  dplyr::filter(Mtype != "Japan") %>% #dplyr::filter(Mtype == "Jensen") %>% print(n=50)
+  ggplot() +
+  geom_point(aes(x = Mmax, y = M, shape = Mtype, color = Species, group = Species), size = 2)+
+  stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
+  theme_bw() +
+  labs(x = "Current M" ,y = "Estimated other M", title = "Current M vs M by other estimators") +scale_y_log10() +
+  facet_wrap(~Mtype)
+
+ggsave("./figs/MvsotehrM_logy_facet_model.png",width = 10, height = 6)
+
+Mcomp <- Mdat_annual %>% dplyr::select(Species, Stock, SPSTSEX, Longevity, Mmax, Mtype, M) %>% unique() %>%
+  tidyr::pivot_wider(names_from = Mtype, values_from = M)
+
+copejensen <- ggplot(Mcomp) + geom_point(aes(Cope, Jensen, color = Species), size = 2)+
+  stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
+  theme_bw() +
+  labs(title = "Cope vs Jensen") +scale_y_log10() +
+  guides(color=guide_legend(ncol=4))
+copeloren <- ggplot(Mcomp) + geom_point(aes(Cope, Lorenzen_mat, color = Species), size = 2)+
+  stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
+  theme_bw() +
+  labs(title = "Cope vs Lorenzen mat") +scale_y_log10()+
+  guides(color=guide_legend(ncol=4))
+jensenloren <- ggplot(Mcomp) + geom_point(aes(Jensen, Lorenzen_mat, color = Species), size = 2)+
+  stat_function(fun = function(x) x, color = "red4", linetype = "dashed") +
+  theme_bw() +
+  labs(title = "Jensen vs Lorenzen mat") +scale_y_log10()+
+  guides(color=guide_legend(ncol=4))
+copejensen + copeloren + jensenloren + guide_area() + plot_layout(ncol = 2, guides = "collect")
+
+ggsave("./figs/compare_each_estimators.png",width = 8, height = 6)
+
 
 ggsave("./figs/M_multi.png", width = 8, height = 5)
 
