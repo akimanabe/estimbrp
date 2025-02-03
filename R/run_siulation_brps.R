@@ -2,7 +2,7 @@ library(tidyverse)
 library(frasyr)
 library(viridis)
 library(patchwork)
-source("./R/script/calc_brp.R")
+source("./R/calc_brp.R")
 
 devtools::load_all()
 
